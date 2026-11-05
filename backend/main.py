@@ -19,7 +19,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-SUC_CHUA = 30
+SUC_CHUA = 31
 
 def get_db_connection():
     db_path = os.getenv("DB_PATH", "ngayhoi.db")
