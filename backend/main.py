@@ -19,6 +19,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+SUC_CHUA = 31
+
 def get_db_connection():
     db_path = os.getenv("DB_PATH", "ngayhoi.db")
     return sqlite3.connect(db_path)
@@ -66,10 +68,10 @@ def dang_ky(data: DangKyRequest):
 
         # Bước 2: Gộp đếm và ghi vào một câu lệnh SQL duy nhất để tránh Race Condition
         cursor.execute(
-            """
+            f"""
             INSERT INTO dang_ky (ma_sv, ma_phien)
             SELECT ?, ?
-            WHERE (SELECT COUNT(*) FROM dang_ky WHERE ma_phien = ?) < 30
+            WHERE (SELECT COUNT(*) FROM dang_ky WHERE ma_phien = ?) < {SUC_CHUA}
             """,
             (ma_sv, ma_phien, ma_phien)
         )
