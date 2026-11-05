@@ -92,3 +92,15 @@ def dang_ky(data: DangKyRequest):
         )
     finally:
         conn.close()
+
+@app.get("/api/con-cho")
+def lay_con_cho(ma_phien: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT COUNT(*) FROM dang_ky WHERE ma_phien = ?", (ma_phien.strip(),))
+        da_dang_ky = cursor.fetchone()[0]
+        con_cho = max(0, SUC_CHUA - da_dang_ky)
+        return {"con_cho": con_cho}
+    finally:
+        conn.close()
