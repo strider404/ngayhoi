@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cổng Đăng Ký Ngày Hội Việc Làm</title>
+    <style>
+      :root {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+        font-weight: 400;
+        color: #1f2937;
+        background-color: #f3f4f6;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .card {
+        max-width: 480px;
+        width: 100%;
+        background-color: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        padding: 32px;
+        margin: 0 auto;
+      }
+      .title {
+        font-size: 24px;
+        font-weight: bold;
+        color: #111827;
+        margin-bottom: 8px;
+        text-align: center;
+      }
+      .subtitle {
+        font-size: 14px;
+        color: #6b7280;
+        text-align: center;
+        margin-bottom: 24px;
+      }
+      .form-group {
+        margin-bottom: 16px;
+      }
+      label {
+        display: block;
+        font-size: 14px;
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 6px;
+      }
+      input {
+        width: 100%;
+        padding: 10px 14px;
+        border-radius: 6px;
+        border: 1px solid #d1d5db;
+        font-size: 14px;
+        outline: none;
+      }
+      input:focus {
+        border-color: #2563eb;
+      }
+      button {
+        width: 100%;
+        background-color: #2563eb;
+        color: #ffffff;
+        padding: 12px;
+        border-radius: 6px;
+        border: none;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        margin-top: 8px;
+      }
+      button:disabled {
+        background-color: #9ca3af;
+        cursor: not-allowed;
+      }
+      .status-box {
+        margin-top: 24px;
+        padding: 12px 16px;
+        border-radius: 6px;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .loading {
+        background-color: #eff6ff;
+        color: #1d4ed8;
+        border: 1px solid #bfdbfe;
+      }
+      .success {
+        background-color: #ecfdf5;
+        color: #047857;
+        border: 1px solid #a7f3d0;
+      }
+      .conflict {
+        background-color: #fffbeb;
+        color: #b45309;
+        border: 1px solid #fde68a;
+      }
+      .error {
+        background-color: #fef2f2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+      }
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1 class="title">Đăng Ký Ngày Hội Việc Làm</h1>
+      <p class="subtitle">Nhập mã sinh viên và chọn mã phiên hội thảo/phỏng vấn</p>
+
+      <form id="formDangKy">
+        <div class="form-group">
+          <label for="ma_sv">Mã sinh viên (ma_sv)</label>
+          <input type="text" id="ma_sv" name="ma_sv" placeholder="Ví dụ: 22020001" required />
+        </div>
+
+        <div class="form-group">
+          <label for="ma_phien">Mã phiên (ma_phien)</label>
+          <input type="text" id="ma_phien" name="ma_phien" placeholder="Ví dụ: P01" required />
+        </div>
+
+        <button type="submit" id="btnSubmit">Đăng Ký Tham Gia</button>
+      </form>
+
+      <div id="statusContainer" class="hidden"></div>
+    </div>
+
+    <script>
+      const form = document.getElementById('formDangKy');
+      const btn = document.getElementById('btnSubmit');
+      const statusBox = document.getElementById('statusContainer');
+
+      function showStatus(type, text) {
+        statusBox.className = 'status-box ' + type;
+        let icon = '';
+        if (type === 'loading') icon = '⏳';
+        else if (type === 'success') icon = '✅';
+        else if (type === 'conflict') icon = '⚠️';
+        else icon = '❌';
+
+        statusBox.innerHTML = `<span>${icon}</span><span>${text}</span>`;
+      }
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const ma_sv = document.getElementById('ma_sv').value.trim();
+        const ma_phien = document.getElementById('ma_phien').value.trim();
+
+        if (!ma_sv || !ma_phien) return;
+
+        // Trạng thái 1: Đang gửi
+        btn.disabled = true;
+        btn.innerText = 'Đang gửi thông tin...';
+        showStatus('loading', '<strong>Trạng thái: Đang gửi</strong> — Đang xử lý đăng ký...');
+
+        try {
+          const res = await fetch('http://localhost:8000/api/dang-ky', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ ma_sv, ma_phien })
+          });
+
+          if (res.status === 201) {
+            // Trạng thái 2: Thành công (201 Created)
+            showStatus('success', '<strong>Trạng thái: Thành công (201 Created)</strong> — Đăng ký tham gia phiên thành công!');
+          } else if (res.status === 409) {
+            // Trạng thái 3: Báo lỗi trùng (409 Conflict)
+            const err = await res.json().catch(() => ({}));
+            showStatus('conflict', `<strong>Trạng thái: Báo lỗi trùng (409 Conflict)</strong> — Bạn đã đăng ký phiên này rồi! (${err.detail || 'DA_DANG_KY'})`);
+          } else {
+            showStatus('error', `Đã xảy ra lỗi: ${res.status}`);
+          }
+        } catch (err) {
+          showStatus('error', `Lỗi kết nối Backend: ${err.message}`);
+        } finally {
+          btn.disabled = false;
+          btn.innerText = 'Đăng Ký Tham Gia';
+        }
+      });
+    </script>
+  </body>
+</html>
+
