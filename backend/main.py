@@ -19,6 +19,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+SUC_CHUA = 30
+
 def get_db_connection():
     db_path = os.getenv("DB_PATH", "ngayhoi.db")
     return sqlite3.connect(db_path)
@@ -46,13 +48,41 @@ class DangKyRequest(BaseModel):
 
 @app.post("/api/dang-ky", status_code=status.HTTP_201_CREATED)
 def dang_ky(data: DangKyRequest):
+    ma_sv = data.ma_sv.strip()
+    ma_phien = data.ma_phien.strip()
+
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
+        # Bước 1: Kiểm tra xem sinh viên đã đăng ký phiên này chưa
         cursor.execute(
-            "INSERT INTO dang_ky (ma_sv, ma_phien) VALUES (?, ?)",
-            (data.ma_sv.strip(), data.ma_phien.strip())
+            "SELECT 1 FROM dang_ky WHERE ma_sv = ? AND ma_phien = ?",
+            (ma_sv, ma_phien)
         )
+        if cursor.fetchone():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="DA_DANG_KY"
+            )
+
+
+        # Bước 2: Gộp đếm và ghi vào một câu lệnh SQL duy nhất để tránh Race Condition
+        cursor.execute(
+            f"""
+            INSERT INTO dang_ky (ma_sv, ma_phien)
+            SELECT ?, ?
+            WHERE (SELECT COUNT(*) FROM dang_ky WHERE ma_phien = ?) < {SUC_CHUA}
+            """,
+            (ma_sv, ma_phien, ma_phien)
+        )
+
+        if cursor.rowcount == 0:
+            # Không có dòng nào được thêm -> phiên đã đủ 30 chỗ
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="HET_CHO"
+            )
+
         conn.commit()
         return {"ok": True}
     except sqlite3.IntegrityError:
